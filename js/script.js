@@ -35,7 +35,7 @@ window.addEventListener('keydown', (e) => {
 function createBall() {
     balls.push({
         x: canvas.width,
-        y: Math.random() * (canvas.height - 50),
+        y: Math.random() * (canvas.height - 50) +25,
         radius: 25,
         speed: Math.random() * 3 + 2
     });
@@ -56,10 +56,9 @@ function drawExplosion(x, y) {
 
 function gameLoop() {
     if (gameOver) {
-        ctx.fillStyle = "red";
+        ctx.fillStyle = "white";
         ctx.font = "48px sans-serif";
         ctx.fillText("Game Over", canvas.width / 2 - 100, canvas.height / 2);
-        ctx.fillText("Score: " + score, canvas.width / 2 - 50, canvas.height / 2 + 60);
         return;
     }
 
