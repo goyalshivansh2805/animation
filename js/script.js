@@ -1,14 +1,20 @@
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
+const values = document.querySelector('.values');
 const scoreDiv = document.getElementById('score');
+const levelDiv = document.getElementById('level');
 const startButton = document.getElementById('startButton');
 const menu = document.getElementById('menu');
 const restartButton = document.getElementById('restartButton');
 const replayButton = document.getElementById('replayButton');
+const shootSound = new Audio("../assets/sounds/shoot.mp3");
+const explosionSound = new Audio("../assets/sounds/explosion.mp3");
+const gameOverSound = new Audio("../assets/sounds/gameover.mp3");
+const characterSound = new Audio("../assets/sounds/character.mp3");
+
 
 const playerImg = new Image();
-playerImg.src = '../assets/player1.png'; 
-
+playerImg.src = '../assets/images/player.png'; 
 
 const player = {
     x: 0,
@@ -18,8 +24,6 @@ const player = {
     speed: 10,
     projectiles: []
 };
-
-
 
 
 const balls = [];
@@ -32,7 +36,8 @@ let gameEvents = [];
 let isReplay = false;
 let startTime;
 let projectileSpeed = 8;
-
+let ballSpdMax = 3;
+let ballSpdMin = 1;
 
 
 function logEvent(type,data){
@@ -68,6 +73,7 @@ window.addEventListener('keydown', (e) => {
     } else if (e.key === ' ' && player.projectiles.length <= 10 && !gameOver) {
         const data = { x: player.x + player.width, y: player.y + player.height / 2, radius: 5 };
         logEvent('projectile',data);
+        shootSound.play();
         player.projectiles.push(data);
         // console.log(data);
     }
@@ -79,7 +85,7 @@ function createBall() {
         x: canvas.width,
         y: Math.random() * (canvas.height - 50) + 25,
         radius: 25,
-        speed: Math.random() * 3 + 2
+        speed: Math.random() * ballSpdMax + ballSpdMin
     };
     balls.push(ball);
     logEvent("ball",ball);
@@ -90,6 +96,7 @@ function resetGame() {
     gameOver = false;
     score = 0;
     scoreDiv.innerText = "Score: 0";
+    levelDiv.innerText= "Level: 1";
     player.projectiles = [];
     balls.length = 0;
     explosions.length = 0;
@@ -97,11 +104,21 @@ function resetGame() {
 
 function drawExplosion(x, y) {
     const explosionSize = 50;
-    for (let i = 0; i < 10; i++) {
-        const alpha = 1 - (i / 10);
+    const colors = ['rgba(255, 69, 0, ', 'rgba(255, 140, 0, ', 'rgba(255, 215, 0, '];
+    const particleCount = 30;
+
+    for (let i = 0; i < particleCount; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const distance = Math.random() * explosionSize;
+        const particleX = x + Math.cos(angle) * distance;
+        const particleY = y + Math.sin(angle) * distance;
+        const size = Math.random() * 5 + 2;
+        const alpha = 1 - (distance / explosionSize);
+        const color = colors[Math.floor(Math.random() * colors.length)] + alpha + ')';
+        // console.log(color);
         ctx.beginPath();
-        ctx.arc(x, y, explosionSize * (i / 10), 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(255, 165, 0, ${alpha})`;
+        ctx.arc(particleX, particleY, size, 0, Math.PI * 2);
+        ctx.fillStyle = color;
         ctx.fill();
     }
 }
@@ -119,6 +136,7 @@ function drawBalls() {
         if (ball.x - ball.radius < player.x + player.width &&
             ball.y + ball.radius > player.y &&
             ball.y - ball.radius < player.y + player.height) {
+            gameOverSound.play();
             gameOver = true;
         }
 
@@ -126,8 +144,10 @@ function drawBalls() {
 
         player.projectiles.forEach((proj, projIndex) => {
             const dist = Math.hypot(proj.x - ball.x, proj.y - ball.y);
+            console.log(dist);
             if (dist - ball.radius - proj.radius < 1) {
                 explosions.push({ x: ball.x, y: ball.y, timer: 15 });
+                explosionSound.play();
                 balls.splice(index, 1);
                 player.projectiles.splice(projIndex, 1);
                 score++;
@@ -136,11 +156,22 @@ function drawBalls() {
         });
 
         if (ball.x - ball.radius < 0) {
+            gameOverSound.play();
             gameOver = true;
         }
     });
 }
 function gameLoop() {
+    if(score>0 && score%10 === 0){
+        const level = levelDiv.innerText.split(" ")[1];
+        if(!(Number(level) === score/10 + 1)){
+            levelDiv.innerText = `Level: ${score/10+1}`;
+            characterSound.play();
+            projectileSpeed += 0.02;
+            ballSpdMax += 0.02;
+            ballSpdMin += 0.02;
+        }
+    }
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     if (gameOver) {
         ctx.fillStyle = "white";
@@ -182,7 +213,7 @@ function gameLoop() {
 
 function menuHider(){
     menu.style.display = "none";
-    scoreDiv.style.display = "block";
+    values.style.display = "flex";
     replayButton.style.display = "none";
     restartButton.style.display = "none";
 }
@@ -198,6 +229,7 @@ function startGame() {
 
 startButton.addEventListener('click', startGame);
 restartButton.addEventListener('click', ()=>{
+    gameEvents = [];
     resetGame();
     startGame()
 });
@@ -227,6 +259,7 @@ function replayGame(){
             balls.push({...event.data});
             console.log(event.data);
         }else if(event.type === "projectile"){
+            shootSound.play();
             player.projectiles.push(event.data);
         }
 

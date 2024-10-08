@@ -14,14 +14,19 @@ body {
     font-family: 'Press Start 2P', cursive;
     text-align: center;
 }
-#score {
+.values {
     position: absolute;
     top: 20px;
-    left: 45%;
-    font-size: 24px;
+    left: 40%;
     display: none;
     color: white;
     z-index: 10;
+    gap:100px;
+}
+
+.values div{
+    margin-bottom: 10px;
+    font-size: 20px;
 }
 canvas {
     border: 2px solid #fff;
@@ -42,30 +47,28 @@ button {
     background-color: #61dafb;
     border: none;
     border-radius: 5px;
+    position: absolute;
     transition: background-color 0.3s;
+    transform: translate(-50%, -50%);
+    display: none;
+    z-index: 2;
 }
 button:hover {
     background-color: #21a1f1;
 }
-#gameOver {
-    display: none;
-    font-size: 36px;
+
+#startButton{
+    display: block;
+    transform: translate(80%);
 }
 
 #restartButton{
-    position: absolute;
     top: 55%;
     left: 50%;
-    transform: translate(-50%, -50%);
-    display: none;
-    z-index: 2;
 }
 
 #replayButton{
-    position: absolute;
     top: 65%;
     left: 50%;
-    transform: translate(-50%, -50%);
-    display: none;
-    z-index: 2;
 }
+
