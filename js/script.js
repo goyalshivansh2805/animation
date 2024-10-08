@@ -41,6 +41,7 @@ function createBall() {
     });
 }
 
+
 setInterval(createBall, 2000);
 
 function drawExplosion(x, y) {
