@@ -3,10 +3,12 @@ const ctx = canvas.getContext('2d');
 const scoreDiv = document.getElementById('score');
 const startButton = document.getElementById('startButton');
 const menu = document.getElementById('menu');
-const gameOverDiv = document.getElementById('gameOver');
+const restartButton = document.getElementById('restartButton');
+const replayButton = document.getElementById('replayButton');
 
 const playerImg = new Image();
 playerImg.src = '../assets/player1.png'; 
+
 
 const player = {
     x: 0,
@@ -17,33 +19,73 @@ const player = {
     projectiles: []
 };
 
+
+
+
 const balls = [];
 const explosions = [];
 let score = 0;
 let gameOver = false;
+let gameStarted = false;
+let intervalID;
+let gameEvents = []; 
+let isReplay = false;
+let startTime;
+let projectileSpeed = 8;
+
+
+
+function logEvent(type,data){
+    let delay;
+    let currentTime = Date.now();
+    if(!gameEvents.length){
+        delay = currentTime - startTime;
+    }else{
+        delay = currentTime - gameEvents[gameEvents.length-1].time;
+    }
+    gameEvents.push({type,data,time:currentTime,delay});
+}
 
 window.addEventListener('keydown', (e) => {
-    if (e.key === 'ArrowUp' && player.y > 0) {
+    if ((e.key === "r" || e.key === "R") && gameOver) {
+        resetGame();
+        startGame();
+    }
+    if (!gameStarted) return;
+    if (e.key === 'ArrowUp' && player.y > 0 && !gameOver) {
         player.y -= player.speed;
-    } else if (e.key === 'ArrowDown' && player.y < canvas.height-100) {
+        logEvent('player','up');
+        console.log(gameEvents);
+    } else if (e.key === 'ArrowDown' && player.y < canvas.height - 100 && !gameOver) {
         player.y += player.speed;
-    } else if (e.key === ' ') {
+        logEvent('player','down');
+        console.log(gameEvents);
+    } else if (e.key === ' ' && player.projectiles.length <= 10 && !gameOver) {
         player.projectiles.push({ x: player.x + player.width, y: player.y + player.height / 2, radius: 5 });
     }
 });
 
 function createBall() {
-    balls.push({
+    if (!gameStarted) return;
+    const ball = {
         x: canvas.width,
-        y: Math.random() * (canvas.height - 50) +25,
+        y: Math.random() * (canvas.height - 50) + 25,
         radius: 25,
         speed: Math.random() * 3 + 2
-    });
+    };
+    balls.push(ball);
+    logEvent("ball",ball);
 }
 
-
-
-setInterval(createBall, 2000);
+function resetGame() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    gameOver = false;
+    score = 0;
+    scoreDiv.innerText = "Score: 0";
+    player.projectiles = [];
+    balls.length = 0;
+    explosions.length = 0;
+}
 
 function drawExplosion(x, y) {
     const explosionSize = 50;
@@ -55,30 +97,7 @@ function drawExplosion(x, y) {
         ctx.fill();
     }
 }
-
-function gameLoop() {
-    if (gameOver) {
-        ctx.fillStyle = "white";
-        ctx.font = "48px sans-serif";
-        ctx.fillText("Game Over", canvas.width / 2 - 100, canvas.height / 2);
-        return;
-    }
-
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    ctx.drawImage(playerImg, player.x, player.y, player.width, player.height);
-
-    ctx.fillStyle = 'yellow';
-    player.projectiles.forEach((proj, index) => {
-        proj.x += 8;
-        ctx.beginPath();
-        ctx.arc(proj.x, proj.y, proj.radius, 0, Math.PI * 2);
-        ctx.fill();
-        if (proj.x > canvas.width) {
-            player.projectiles.splice(index, 1);
-        }
-    });
-
+function drawBalls() {
     balls.forEach((ball, index) => {
         ball.x -= ball.speed;
         ctx.fillStyle = 'red';
@@ -107,7 +126,34 @@ function gameLoop() {
             gameOver = true;
         }
     });
+}
+function gameLoop() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (gameOver) {
+        ctx.fillStyle = "white";
+        ctx.font = "48px sans-serif";
+        ctx.fillText("Game Over", canvas.width / 2 - 100, canvas.height / 2);
+        restartButton.style.display = "block";
+        replayButton.style.display = "block"; 
+        clearTimeout(intervalID);
+        gameStarted = false;
+        return;
+    }
 
+    ctx.drawImage(playerImg, player.x, player.y, player.width, player.height);
+
+    ctx.fillStyle = 'yellow';
+    player.projectiles.forEach((proj, index) => {
+        proj.x += projectileSpeed;
+        ctx.beginPath();
+        ctx.arc(proj.x, proj.y, proj.radius, 0, Math.PI * 2);
+        ctx.fill();
+        if (proj.x > canvas.width) {
+            player.projectiles.splice(index, 1);
+        }
+    });
+
+    drawBalls();
     explosions.forEach((exp, index) => {
         drawExplosion(exp.x, exp.y);
         exp.timer--;
@@ -116,14 +162,89 @@ function gameLoop() {
         }
     });
 
-
     requestAnimationFrame(gameLoop);
 }
 
-function startGame() {
+function repeatLoop(){
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (gameOver) {
+        ctx.fillStyle = "white";
+        ctx.font = "48px sans-serif";
+        ctx.fillText("Game Over", canvas.width / 2 - 100, canvas.height / 2);
+        restartButton.style.display = "block";
+        replayButton.style.display = "block"; 
+        clearTimeout(intervalID);
+        gameStarted = false;
+        return;
+    }
+    ctx.drawImage(playerImg, player.x, player.y, player.width, player.height);
+    drawBalls();
+    requestAnimationFrame(repeatLoop);
+}
+
+function menuHider(){
     menu.style.display = "none";
     scoreDiv.style.display = "block";
+    replayButton.style.display = "none";
+    restartButton.style.display = "none";
+}
+
+function startGame() {
+    menuHider();
+    startTime = Date.now();
+    gameStarted = true;
+    gameOver = false;
+    intervalID = setInterval(createBall, 2000);
     gameLoop();
 }
 
 startButton.addEventListener('click', startGame);
+restartButton.addEventListener('click', ()=>{
+    resetGame();
+    startGame()
+});
+replayButton.addEventListener('click',replayGame)
+
+
+
+function replayGame(){
+    player.y=canvas.height/2 -50;
+    resetGame();
+    menuHider();
+    gameStarted = true;
+    gameOver = false;
+    isReplay = true;
+    let eventIndex = 0;
+    function processNextEvent() {
+        if (eventIndex >= gameEvents.length) return; 
+        
+        const event = gameEvents[eventIndex++];
+        if(event.type === "player"){
+            replayPlayerMovement(event);
+        }else if(event.type === "ball"){
+            // balls.push(event.data);
+            // drawBalls();
+        }
+
+        if (eventIndex < gameEvents.length) {
+            const nextEvent = gameEvents[eventIndex];
+            setTimeout(processNextEvent, nextEvent.delay); 
+        }
+    }
+
+    if (gameEvents.length > 0) {
+        processNextEvent(); 
+    }
+}
+function replayPlayerMovement(event) {
+    if (event.data === "up" && player.y>0) {
+        console.log("up")
+        player.y -= player.speed;
+    } else if (event.data === "down" && player.y<canvas.height-100) {
+        console.log("down")
+        player.y += player.speed;
+    }
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(playerImg, player.x, player.y, player.width, player.height);
+}
+
