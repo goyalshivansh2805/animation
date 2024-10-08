@@ -43,7 +43,14 @@ function logEvent(type,data){
     }else{
         delay = currentTime - gameEvents[gameEvents.length-1].time;
     }
-    gameEvents.push({type,data,time:currentTime,delay});
+    // console.log(data);
+    if(type === "player"){
+        gameEvents.push({type,data,time:currentTime,delay});
+    }
+    else{
+        gameEvents.push({type,data:{...data},time:currentTime,delay});
+    }
+    // console.log(gameEvents);
 }
 
 window.addEventListener('keydown', (e) => {
@@ -55,13 +62,14 @@ window.addEventListener('keydown', (e) => {
     if (e.key === 'ArrowUp' && player.y > 0 && !gameOver) {
         player.y -= player.speed;
         logEvent('player','up');
-        console.log(gameEvents);
     } else if (e.key === 'ArrowDown' && player.y < canvas.height - 100 && !gameOver) {
         player.y += player.speed;
         logEvent('player','down');
-        console.log(gameEvents);
     } else if (e.key === ' ' && player.projectiles.length <= 10 && !gameOver) {
-        player.projectiles.push({ x: player.x + player.width, y: player.y + player.height / 2, radius: 5 });
+        const data = { x: player.x + player.width, y: player.y + player.height / 2, radius: 5 };
+        logEvent('projectile',data);
+        player.projectiles.push(data);
+        // console.log(data);
     }
 });
 
@@ -102,6 +110,9 @@ function drawBalls() {
         ball.x -= ball.speed;
         ctx.fillStyle = 'red';
         ctx.beginPath();
+        // if(isReplay){
+        //     console.log(ball);
+        // }
         ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
         ctx.fill();
 
@@ -110,6 +121,8 @@ function drawBalls() {
             ball.y - ball.radius < player.y + player.height) {
             gameOver = true;
         }
+
+
 
         player.projectiles.forEach((proj, projIndex) => {
             const dist = Math.hypot(proj.x - ball.x, proj.y - ball.y);
@@ -135,7 +148,9 @@ function gameLoop() {
         ctx.fillText("Game Over", canvas.width / 2 - 100, canvas.height / 2);
         restartButton.style.display = "block";
         replayButton.style.display = "block"; 
-        clearTimeout(intervalID);
+        if(!isReplay){
+            clearTimeout(intervalID);
+        }
         gameStarted = false;
         return;
     }
@@ -165,23 +180,6 @@ function gameLoop() {
     requestAnimationFrame(gameLoop);
 }
 
-function repeatLoop(){
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    if (gameOver) {
-        ctx.fillStyle = "white";
-        ctx.font = "48px sans-serif";
-        ctx.fillText("Game Over", canvas.width / 2 - 100, canvas.height / 2);
-        restartButton.style.display = "block";
-        replayButton.style.display = "block"; 
-        clearTimeout(intervalID);
-        gameStarted = false;
-        return;
-    }
-    ctx.drawImage(playerImg, player.x, player.y, player.width, player.height);
-    drawBalls();
-    requestAnimationFrame(repeatLoop);
-}
-
 function menuHider(){
     menu.style.display = "none";
     scoreDiv.style.display = "block";
@@ -203,7 +201,11 @@ restartButton.addEventListener('click', ()=>{
     resetGame();
     startGame()
 });
-replayButton.addEventListener('click',replayGame)
+replayButton.addEventListener('click',()=>{
+    resetGame();
+    replayGame();
+    gameLoop();
+});
 
 
 
@@ -222,8 +224,10 @@ function replayGame(){
         if(event.type === "player"){
             replayPlayerMovement(event);
         }else if(event.type === "ball"){
-            // balls.push(event.data);
-            // drawBalls();
+            balls.push({...event.data});
+            console.log(event.data);
+        }else if(event.type === "projectile"){
+            player.projectiles.push(event.data);
         }
 
         if (eventIndex < gameEvents.length) {
