@@ -41,7 +41,7 @@ let ballSpdMax = 3;
 let ballSpdMin = 1;
 let isAutoPlay = false;
 
-function logEvent(type,data){
+function logEvent(type,data,auto){
     let delay;
     let currentTime = Date.now();
     if(!gameEvents.length){
@@ -51,10 +51,10 @@ function logEvent(type,data){
     }
     // console.log(data);
     if(type === "player"){
-        gameEvents.push({type,data,time:currentTime,delay});
+        gameEvents.push({type,data,time:currentTime,delay,isAuto:auto?true:false});
     }
     else{
-        gameEvents.push({type,data:{...data},time:currentTime,delay});
+        gameEvents.push({type,data:{...data},time:currentTime,delay,isAuto:auto?true:false});
     }
     // console.log(gameEvents);
 }
@@ -67,13 +67,13 @@ window.addEventListener('keydown', (e) => {
     if (!gameStarted) return;
     if (e.key === 'ArrowUp' && player.y > 0 && !gameOver) {
         player.y -= player.speed;
-        logEvent('player','up');
+        logEvent('player','up',false);
     } else if (e.key === 'ArrowDown' && player.y < canvas.height - 100 && !gameOver) {
         player.y += player.speed;
-        logEvent('player','down');
+        logEvent('player','down',false);
     } else if (e.key === ' ' && player.projectiles.length <= 10 && !gameOver) {
         const data = { x: player.x + player.width, y: player.y + player.height / 2, radius: 5 };
-        logEvent('projectile',data);
+        logEvent('projectile',data,false);
         explosionSound.pause();
         characterSound.pause();
         gameOverSound.pause();
@@ -187,8 +187,10 @@ function autoPlay() {
     
     if ((player.y  < (ball.y- ball.radius-5))  && player.y < canvas.height -100) {
         player.y += player.speed;
+        logEvent('player','down',true);
     } else if ((player.y  >( ball.y - ball.radius+5)) ) {
         player.y -= player.speed;
+        logEvent('player','up',true);
     } else {
         if (!isProjectileShoot.includes(ball)) { 
             const data = { x: player.x + player.width, y: player.y + player.height / 2, radius: 5 };
@@ -196,6 +198,7 @@ function autoPlay() {
             characterSound.pause();
             gameOverSound.pause();
             shootSound.play();
+            logEvent('projectile',data,true);
             player.projectiles.push(data);
             isProjectileShoot.push(ball);
         }
@@ -245,11 +248,14 @@ function gameLoop() {
         ctx.font = "48px sans-serif";
         ctx.fillText("Game Over", canvas.width / 2 - 100, canvas.height / 2);
         restartButton.style.display = "block";
-        replayButton.style.display = "block"; 
+        if(!isReplay){
+            replayButton.style.display = "block"; 
+        }
         if(!isReplay){
             clearTimeout(intervalID);
         }
         gameStarted = false;
+
         return;
     }
 
@@ -317,6 +323,7 @@ restartButton.addEventListener('click', ()=>{
     startGame()
 });
 replayButton.addEventListener('click',()=>{
+    autoPlayButton.style.display = "none";
     resetGame();
     replayGame();
     gameLoop();
@@ -359,10 +366,19 @@ function replayGame(){
 function replayPlayerMovement(event) {
     if (event.data === "up" && player.y>0) {
         console.log("up")
-        player.y -= player.speed;
+        if(event.isAuto){
+            player.y -= 3;
+        }else{
+
+            player.y -= player.speed;
+        }
     } else if (event.data === "down" && player.y<canvas.height-100) {
         console.log("down")
-        player.y += player.speed;
+        if(event.isAuto){
+            player.y += 3;
+        }else{
+            player.y +=player.speed;
+        }
     }
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(playerImg, player.x, player.y, player.width, player.height);
