@@ -248,6 +248,7 @@ function gameLoop() {
         ctx.font = "48px sans-serif";
         ctx.fillText("Game Over", canvas.width / 2 - 100, canvas.height / 2);
         restartButton.style.display = "block";
+        autoPlayButton.style.display="none";
         if(!isReplay){
             replayButton.style.display = "block"; 
         }
@@ -255,7 +256,8 @@ function gameLoop() {
             clearTimeout(intervalID);
         }
         gameStarted = false;
-
+        isAutoPlay=false;
+        isReplay=false;
         return;
     }
 
@@ -288,7 +290,11 @@ function gameLoop() {
 function menuHider(){
     menu.style.display = "none";
     values.style.display = "flex";
-    autoPlayButton.style.display = "block";
+    if(!isReplay){
+        autoPlayButton.style.display = "block";
+    }else{
+        autoPlayButton.style.display="none"
+    }
     replayButton.style.display = "none";
     restartButton.style.display = "none";
 }
@@ -298,6 +304,7 @@ function startGame() {
     startTime = Date.now();
     gameStarted = true;
     gameOver = false;
+    isReplay=false;
     intervalID = setInterval(createBall, 2000);
     gameLoop();
 }
@@ -323,6 +330,7 @@ restartButton.addEventListener('click', ()=>{
     startGame()
 });
 replayButton.addEventListener('click',()=>{
+    isReplay=true;
     autoPlayButton.style.display = "none";
     resetGame();
     replayGame();
