@@ -7,6 +7,7 @@ const startButton = document.getElementById('startButton');
 const menu = document.getElementById('menu');
 const restartButton = document.getElementById('restartButton');
 const replayButton = document.getElementById('replayButton');
+const autoPlayButton = document.getElementById("autoPlayButton");
 const shootSound = new Audio("../assets/sounds/shoot.mp3");
 const explosionSound = new Audio("../assets/sounds/explosion.mp3");
 const gameOverSound = new Audio("../assets/sounds/gameover.mp3");
@@ -38,7 +39,7 @@ let startTime;
 let projectileSpeed = 8;
 let ballSpdMax = 3;
 let ballSpdMin = 1;
-
+let isAutoPlay = false;
 
 function logEvent(type,data){
     let delay;
@@ -73,6 +74,9 @@ window.addEventListener('keydown', (e) => {
     } else if (e.key === ' ' && player.projectiles.length <= 10 && !gameOver) {
         const data = { x: player.x + player.width, y: player.y + player.height / 2, radius: 5 };
         logEvent('projectile',data);
+        explosionSound.pause();
+        characterSound.pause();
+        gameOverSound.pause();
         shootSound.play();
         player.projectiles.push(data);
         // console.log(data);
@@ -136,6 +140,9 @@ function drawBalls() {
         if (ball.x - ball.radius < player.x + player.width &&
             ball.y + ball.radius > player.y &&
             ball.y - ball.radius < player.y + player.height) {
+            shootSound.pause();
+            explosionSound.pause();
+            characterSound.pause();
             gameOverSound.play();
             gameOver = true;
         }
@@ -147,6 +154,9 @@ function drawBalls() {
             console.log(dist);
             if (dist - ball.radius - proj.radius < 1) {
                 explosions.push({ x: ball.x, y: ball.y, timer: 15 });
+                characterSound.pause();
+                gameOverSound.pause();
+                shootSound.pause();
                 explosionSound.play();
                 balls.splice(index, 1);
                 player.projectiles.splice(projIndex, 1);
@@ -156,16 +166,70 @@ function drawBalls() {
         });
 
         if (ball.x - ball.radius < 0) {
+            shootSound.pause();
+            explosionSound.pause();
+            characterSound.pause();
             gameOverSound.play();
             gameOver = true;
         }
     });
 }
+
+const isProjectileShoot = [];
+
+
+
+
+function autoPlay() {
+    const ball = nearestBall(); 
+    if (!ball) return; 
+
+    
+    if ((player.y  < (ball.y- ball.radius-5))  && player.y < canvas.height -100) {
+        player.y += player.speed;
+    } else if ((player.y  >( ball.y - ball.radius+5)) ) {
+        player.y -= player.speed;
+    } else {
+        if (!isProjectileShoot.includes(ball)) { 
+            const data = { x: player.x + player.width, y: player.y + player.height / 2, radius: 5 };
+            explosionSound.pause();
+            characterSound.pause();
+            gameOverSound.pause();
+            shootSound.play();
+            player.projectiles.push(data);
+            isProjectileShoot.push(ball);
+        }
+    }
+    
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(playerImg, player.x, player.y, player.width, player.height);
+    drawBalls();
+
+}
+
+function nearestBall() {
+    let nearestBall;
+    let minTime = Infinity;
+
+    balls.forEach(ball => {
+        const time = ball.x / ball.speed; 
+        if (time < minTime) {
+            minTime = time;
+            nearestBall = ball;
+        }
+    });
+
+    return nearestBall;
+}
+
 function gameLoop() {
     if(score>0 && score%10 === 0){
         const level = levelDiv.innerText.split(" ")[1];
         if(!(Number(level) === score/10 + 1)){
             levelDiv.innerText = `Level: ${score/10+1}`;
+            explosionSound.pause();
+            gameOverSound.pause();
+            shootSound.pause();
             characterSound.play();
             projectileSpeed += 0.02;
             ballSpdMax += 0.02;
@@ -173,6 +237,9 @@ function gameLoop() {
         }
     }
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if(isAutoPlay){
+        autoPlay();
+    }
     if (gameOver) {
         ctx.fillStyle = "white";
         ctx.font = "48px sans-serif";
@@ -200,6 +267,7 @@ function gameLoop() {
     });
 
     drawBalls();
+    // nearestBall();
     explosions.forEach((exp, index) => {
         drawExplosion(exp.x, exp.y);
         exp.timer--;
@@ -214,6 +282,7 @@ function gameLoop() {
 function menuHider(){
     menu.style.display = "none";
     values.style.display = "flex";
+    autoPlayButton.style.display = "block";
     replayButton.style.display = "none";
     restartButton.style.display = "none";
 }
@@ -226,6 +295,20 @@ function startGame() {
     intervalID = setInterval(createBall, 2000);
     gameLoop();
 }
+
+function startAutoPlay(){
+    isAutoPlay = !isAutoPlay;
+    autoPlayButton.innerText = isAutoPlay?"Disable Auto Play":"Enable Auto Play";
+    if(isAutoPlay){
+        player.speed = 3;
+        autoPlay();
+        gameLoop();
+    }else{
+        player.speed =10;
+    }
+}
+
+autoPlayButton.addEventListener("click",startAutoPlay);
 
 startButton.addEventListener('click', startGame);
 restartButton.addEventListener('click', ()=>{
@@ -243,7 +326,7 @@ replayButton.addEventListener('click',()=>{
 
 function replayGame(){
     player.y=canvas.height/2 -50;
-    resetGame();
+    // resetGame();
     menuHider();
     gameStarted = true;
     gameOver = false;

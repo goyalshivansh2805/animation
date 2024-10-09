@@ -72,3 +72,8 @@ button:hover {
     left: 50%;
 }
 
+#autoPlayButton{
+    top:30px;
+    right:50px;
+    z-index: 2;
+}
