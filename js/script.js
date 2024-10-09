@@ -234,7 +234,7 @@ function gameLoop() {
             gameOverSound.pause();
             shootSound.pause();
             characterSound.play();
-            projectileSpeed += 0.02;
+            projectileSpeed += 0.01;
             ballSpdMax += 0.02;
             ballSpdMin += 0.02;
         }
