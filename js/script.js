@@ -61,6 +61,8 @@ function logEvent(type,data,auto){
 
 window.addEventListener('keydown', (e) => {
     if ((e.key === "r" || e.key === "R") && gameOver) {
+        gameEvents = [];
+        player.y = canvas.height/2 -50;
         resetGame();
         startGame();
     }
